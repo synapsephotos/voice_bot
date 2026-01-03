@@ -29,50 +29,68 @@ class FOSSSelfBot(discord.Client):
         self.target_channel_id = target_cid
 
     async def on_ready(self):
-        # Use self instead of client inside the class
-        print(f'SYSTEM: Logged in as {self.user}')
+        print(f'SYSTEM: Logged in as {self.user} (ID: {self.user.id})')
         
-        # This prevents a crash if the token doesn't have permissions
         try:
             await self.change_presence(status=discord.Status.invisible, afk=True)
-            print("SYSTEM: Presence set to Invisible + AFK.")
+            print(f"SYSTEM: Presence set to Invisible for {self.user}")
         except Exception as e:
-            print(f"Status Error: {e}")
+            print(f"Status Error for {self.user}: {e}")
 
         channel = self.get_channel(self.target_channel_id)
         if channel:
             await self.attempt_connect(channel)
         else:
-            print(f"Error: Could not find channel {self.target_channel_id}")
+            print(f"Error: Could not find channel {self.target_channel_id} for {self.user}")
 
     async def attempt_connect(self, channel):
         try:
-            print("Clearing ghost sessions...")
+            print(f"[{self.user}] Clearing ghost sessions...")
             await channel.guild.change_voice_state(channel=None)
             await asyncio.sleep(2)
 
-            print(f"Connecting to {channel.name}...")
+            print(f"[{self.user}] Connecting to {channel.name}...")
             await channel.connect(timeout=20.0, reconnect=True)
-            print("Successfully connected to Voice!")
+            print(f"[{self.user}] Successfully connected to Voice!")
         except Exception as e:
-            print(f"Connection failed: {e}")
+            print(f"[{self.user}] Connection failed: {e}")
+
+# --- ASYNC RUNNER ---
+async def start_multibot():
+    # Configuration: Add your tokens and target channels here
+    # You can point them to the same channel or different ones
+    accounts = [
+        {"token": os.environ.get("TOKEN_1"), "channel": 1185566603052597248},
+        {"token": os.environ.get("TOKEN_2"), "channel": 1185566603052597248}
+    ]
+
+    # Initialize the flask server for uptime
+    keep_alive()
+
+    clients = []
+    tasks = []
+
+    for acc in accounts:
+        token = acc["token"]
+        if token:
+            client = FOSSSelfBot(acc["channel"])
+            clients.append(client)
+            # Create a task for each client's start method
+            tasks.append(client.start(token))
+        else:
+            print("Warning: One of the tokens is missing in Environment Variables.")
+
+    if tasks:
+        # Run all clients concurrently
+        await asyncio.gather(*tasks)
+    else:
+        print("Error: No valid tokens found. Script exiting.")
 
 # --- EXECUTION ---
-# Get token from Render Environment Variables
-TOKEN = os.environ.get("Authorization")
-CHANNEL_ID = 1185566603052597248
-
-if TOKEN:
-    # 1. Start the Flask server thread FIRST
-    keep_alive()
-    
-    # 2. Initialize the custom Bot class
-    client = FOSSSelfBot(CHANNEL_ID)
-    
-    # 3. Start the Bot (This blocks the script)
+if __name__ == "__main__":
     try:
-        client.run(TOKEN)
-    except discord.errors.LoginFailure:
-        print("Error: Invalid Token. Check your Render Environment Variables.")
-else:
-    print("Error: No 'Authorization' token found in Environment Variables.")
+        asyncio.run(start_multibot())
+    except KeyboardInterrupt:
+        print("System: Shutting down manually.")
+    except Exception as e:
+        print(f"System: Fatal error: {e}")
