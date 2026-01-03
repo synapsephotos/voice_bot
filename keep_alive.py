@@ -8,6 +8,6 @@ app = Flask(__name__)
 def run():
   app.run(host='0.0.0.0', port=3000, debug=False, use_reloader=False)
 
-def keep_aliive():
+def keep_alive():
   server = Thread(target=run)
   server.start()
