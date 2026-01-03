@@ -67,6 +67,6 @@ class FOSSSelfBot(discord.Client):
 TOKEN = os.environ.get("Authorization")
 CHANNEL_ID = 1185566603052597248
 
+keep_alive()
 client = FOSSSelfBot(CHANNEL_ID)
 client.run(TOKEN)
-keep_alive()
